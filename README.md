@@ -6,11 +6,13 @@ This is another suggestion to implement the hook pattern. [React-hooks was intro
 
 Please feel free to open issues or comment on the existing for some discussion.
 
-## differences
+## proposals
 
-I will first show what the changes look like. In the following sections I will talk about the motivation and show some side-by-side-comparisons.
+How does it look like? Code first for both proposals/changes, then explanations.
 
 ### 1. hooks with a factory-function
+
+([codesandbox-example](https://codesandbox.io/s/wk6qq77wkw))
 
 ```javascript
 function FactoryExample(initialProps) {
@@ -31,7 +33,11 @@ function FactoryExample(initialProps) {
 }
 ```
 
+Have a look at [Motivation factory-pattern](#motivation-factory-pattern) for more information.
+
 ### 2. skipping effects with a flag
+
+([codesandbox-example](https://codesandbox.io/s/kmvqp258nr))
 
 ```javascript
 useEffect(
@@ -44,7 +50,7 @@ useEffect(
 );
 ```
 
-Which could be used like (analogous to the [React example](#https://reactjs.org/docs/hooks-effect.html#tip-optimizing-performance-by-skipping-effects)):
+Which could be used like (analogous to the [React example](#https://reactjs.org/docs/hooks-effect.html#tip-optimizing-performance-by-skipping-effects)): ([codesandbox-example](https://codesandbox.io/s/2wr71v8zvj))
 
 ```javascript
 useEffect(props => {
@@ -55,7 +61,7 @@ useEffect(props => {
 }, when(itemsDidNotChanged(props => [props.friend.id]), () => SKIP_EFFECT));
 ```
 
-The second example uses some external functions, check the material below, to see which.
+Have a look at [Motivation for skipping effects via flag](#motivation-for-skipping-effects-via-flag) for more information.
 
 ## Motivation factory-pattern
 
