@@ -1,26 +1,24 @@
-import * as React from "react";
+import React from "react";
+
+export const SKIP_EFFECT = "SKIP_EFFECT";
 
 let internalUseState;
-
 export function useState(initialValue) {
   if (!internalUseState) {
     throw new Error(
       "Factory-hooks must be used inside a factory-component. You must wrap your factory-components with `factory(factoryComponent)`"
     );
   }
-
   return internalUseState(initialValue);
 }
 
 let internalUseEffect;
-
 export function useEffect(effect, shouldFire) {
   if (!internalUseEffect) {
     throw new Error(
       "Factory-hooks must be used inside a factory-component. You must wrap your factory-components with `factory(factoryComponent)`"
     );
   }
-
   internalUseEffect(effect, shouldFire);
 }
 
@@ -32,18 +30,14 @@ export function factory(factoryComponent) {
       let inc = 0;
 
       this.state = {};
-
-      // useEffectStates holds the parameters of the `useEffect` calls,
-      // and also holds the last return value of the `effect` function in the `cleanUp`-key.
-      // The `cleanUp`-value is overwritten every time the `effect` function is called.
       this.useEffectStates = [];
 
       internalUseState = initialValue => {
         inc++;
+
         const stateKey = `use_state_${inc}`;
 
         // this breaks the readonly rule, but since it is only used during initialization, it should be fine
-        // @ts-ignore
         this.state[stateKey] = initialValue;
 
         const getState = () => this.state[stateKey];
@@ -62,11 +56,11 @@ export function factory(factoryComponent) {
       internalUseEffect = undefined;
     }
 
-    fireEffects(prevProps) {
+    fireEffects() {
       this.useEffectStates.forEach(useEffectState => {
         if (
           useEffectState.shouldFire &&
-          !useEffectState.shouldFire(this.props, prevProps)
+          useEffectState.shouldFire(this.props) === SKIP_EFFECT
         ) {
           return;
         }
@@ -83,8 +77,8 @@ export function factory(factoryComponent) {
       this.fireEffects();
     }
 
-    componentDidUpdate(prevProps) {
-      this.fireEffects(prevProps);
+    componentDidUpdate() {
+      this.fireEffects();
     }
 
     componentWillUnmount() {
