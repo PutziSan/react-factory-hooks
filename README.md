@@ -135,7 +135,7 @@ function Example(props) {
 }
 // and now adding a state/effect is straight forward
 function Example(getProps) {
-  useEffect(() => document.title = `Hi ${getProps().name}!`);
+  useEffect(() => (document.title = `Hi ${getProps().name}!`));
 
   return props => <p>Hi {props.name}</p>;
 }
@@ -220,7 +220,10 @@ function Example(getProps) {
     () => {
       ChatAPI.subscribeToFriendStatus(getProps().friend.id, handleStatusChange);
       return () => {
-        ChatAPI.unsubscribeFriendStatus(getProps().friend.id, handleStatusChange);
+        ChatAPI.unsubscribeFriendStatus(
+          getProps().friend.id,
+          handleStatusChange
+        );
       };
     },
     () => {
