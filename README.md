@@ -6,6 +6,8 @@ This is another suggestion to implement the hook pattern. [React-hooks was intro
 
 Please feel free to open issues or comment on the existing for some discussion.
 
+> This is the 2nd draft, the idea to pass `getProps` to the factory function as a parameter instead of `initialProps` was first designed by @zouloux and published in its own proposal under [solid-js/prehook-proof-of-concept](https://github.com/solid-js/prehook-proof-of-concept), so credits for this idea deserves to @zouloux.
+
 ## proposals
 
 How does it look like? Code first for both proposals/changes, then explanations.
