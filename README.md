@@ -121,13 +121,13 @@ function Example(getProps) {
 }
 ```
 
-There are 2 reasons for a factory-pattern with `props` as parameter in addition to the `getProps` parameter in the wrapping function. There are 2 reasons for this: The development cycle and testability.
+There are 2 reasons for a factory-pattern with `props` as parameter in addition to the `getProps` parameter in the wrapping function: development cycle and testability.
 
 #### better development-cycle through the `props` argument
 
 It is very important that the proposal supports use in the everyday development cycle. If we want to add a state or effect to a "normal" (or stateless) functional component, it should be as simple as possible. Therefore, the render function should include `props` as a parameter, so that actually only the wrapping function needs to be added and the component (or render function) does not need any further changes.
 
-```
+```jsx
 function Example(props) {
   return <p>Hi {props.name}</p>;
 }
