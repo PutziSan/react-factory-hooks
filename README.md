@@ -14,7 +14,7 @@ How does it look like? Code first for both proposals/changes, then explanations.
 
 ([codesandbox-example](https://codesandbox.io/s/wk6qq77wkw))
 
-```javascript
+```jsx
 function FactoryExample(initialProps) {
   const [getCount, setCount] = useState(initialProps.startCount);
 
@@ -41,7 +41,7 @@ Have a look at [Motivation factory-pattern](#motivation-factory-pattern) for mor
 
 ```javascript
 useEffect(
-  props => /* ... no furhter changes */,
+  props => {/* ... no furhter changes */},
   props => {
     if (mySkippingCondition) {
       return SKIP_EFFECT;
@@ -67,7 +67,7 @@ Have a look at [Motivation for skipping effects via flag](#motivation-for-skippi
 
 I really like hooks a lot. In the discussion (e.g. at [RFC: React Hooks #68](https://github.com/reactjs/rfcs/pull/68)) it is noticeable that some people don't like the "magic" behind hooks. This magic is reflected, for example, in the fact that there are [rules for hooks](https://reactjs.org/docs/hooks-rules.html) which can be forced with an ESLint plugin. If you look at the basic example:
 
-```javascript
+```jsx
 function Example() {
   // Declare a new state variable, which we'll call "count"
   const [count, setCount] = useState(0);
@@ -83,7 +83,7 @@ So, if we try to verbalize code, it looks something like this:
 
 So, the "magic" is here "some kind of internal memory". If we look at the same via a factory:
 
-```javascript
+```jsx
 function Example() {
   // Declare a new state variable, which we'll call "count"
   const [count, setCount] = useState(0);
@@ -98,24 +98,99 @@ The implemenation of `useState` still needs some "magic" like "some kind of inte
 
 > The public API should hide the magic and the current hooks-RFC by react show too much magic for the user (developer).
 
+### Why the render function should get `props` as argument
+
+> "render function" means the inner function which is returned by the factory.
+
+```jsx
+// example-component where the render function has no parameter.
+function Example(getProps) {
+  // use* 
+  return () => <p>Hi {getProps().name}</p>;
+}
+
+// example-component where the render function has `props` as parameter.
+function Example(getProps) {
+  // use* 
+  // note that `props` is available here (like in a normal component)
+  return props => <p>Hi {props.name}</p>;
+}
+```
+
+There are 2 reasons for a factory-pattern with `props` as parameter in addition to the `getProps` parameter in the wrapping function. There are 2 reasons for this: The development cycle and testability.
+
+#### better development-cycle through the `props` argument
+
+It is very important that the proposal supports use in the everyday development cycle. If we want to add a state or effect to a "normal" (or stateless) functional component, it should be as simple as possible. Therefore, the render function should include `props` as a parameter, so that actually only the wrapping function needs to be added and the component (or render function) does not need any further changes.
+
+```
+function Example(props) {
+  return <p>Hi {props.name}</p>;
+}
+// and now adding a state/effect is straight forward
+function Example(getProps) {
+  useEffect(() => document.title = `Hi ${getProps().name}!`);
+
+  return props => <p>Hi {props.name}</p>;
+}
+```
+
+#### better testability through the `props` argument
+
+It should be possible and easy to test the render function in isolation. If the render function contains `props` as parameter, it can be extracted and is then like a "normal" (stateless) component and can be shallow-rendered as such. If we look at this example `Counter`-component: 
+
+```jsx
+// Counter.js
+import React from 'react';
+
+export function renderCounter({ getCount, setCount }) {
+  return props => (
+    <div>
+      <p>
+        {props.name} clicked {getCount()} times
+      </p>
+      <button onClick={() => setCount(getCount() + 1)}>Click me</button>
+    </div>
+  );
+}
+
+export function Counter(getProps) {
+  const [getCount, setCount] = useState(getProps().startCount);
+
+  return renderCounter({ getCount, setCount });
+}
+```
+
+a test might look like this (using [jest](https://jestjs.io/docs/en/tutorial-react#dom-testing) and [Enzyme's shallow renderer](https://airbnb.io/enzyme/docs/api/shallow.html)):
+
+```jsx
+// Counter.test.js
+import { renderCounter } from "./Counter.js";
+import { shallow } from "enzyme";
+
+it("should call setCount on button-click", function() {
+  const mockCallBack = jest.fn();
+
+  const MockedCounter = renderCounter({
+    getCount: () => 1,
+    setCount: mockCallBack
+  });
+  
+  const counter = shallow(<MockedCounter name="test" />);
+  counter.find("button").simulate("click");
+  
+  expect(mockCallBack.mock.calls.length).toEqual(1);
+});
+
+```
+
 ### advantages of the factory-pattern
 
 In addition to the motivation described above, there are other advantages to using a wrapping function. These advantages are not emotional and can be quickly proven.
 
 #### get components isolated from state (simpler unit-testing)
 
-```javascript
-// you could now test exampleFactory in isolation
-export function exampleFactory({ getCount, setCount }) {
-  return props => <div />;
-}
-
-export function Example() {
-  const [getCount, setCount] = useState(0);
-
-  return exampleFactory({ getCount, setCount });
-}
-```
+[see "better testability through the `props` argument"](#better-testability-through-the-props-argument) above.
 
 #### avoids confusion about initialProps
 
@@ -144,7 +219,7 @@ function Example(initialProps) {
 
 `useEffect` is just great! But skipping effects, by including the second parameter as an array is just not-so-great! ;-) It is some sort of "convention over code". It is simply not necessary, a simple function that passes a flag to control the behavior of the effect is much clearer. It has to be said that the code becomes a bit longer at first, let's take a look at the example from the [React-documentation](https://reactjs.org/docs/hooks-effect.html#tip-optimizing-performance-by-skipping-effects):
 
-```javascript
+```jsx
 function Example(props) {
   useEffect(
     () => {
@@ -162,7 +237,7 @@ function Example(props) {
 
 if we rewrite that with a function and a flag (and the factory-pattern from above): ([codesandbox-example](https://codesandbox.io/s/2wr71v8zvj))
 
-```javascript
+```jsx
 function Example() {
   let prevId;
 
@@ -190,7 +265,7 @@ Yep, this is more, 8 lines of code more for this example. Now try to find out wh
 
 However, with this approach, we can use arbitrary behavior. It again offers a lot of space to let the community grow and come up with ideas that nobody can guess at the moment. For example, the current behavior can be easily recreated: ([codesandbox-example](https://codesandbox.io/s/2wr71v8zvj))
 
-```javascript
+```jsx
 function Example() {
   useEffect(props => {
     ChatAPI.subscribeToFriendStatus(props.friend.id, handleStatusChange);
