@@ -50,7 +50,7 @@ export function factory(factoryComponent) {
         this.useEffectStates.push({ effect, shouldFire });
       };
 
-      this.renderFunc = factoryComponent(props);
+      this.renderFunc = factoryComponent(() => this.props);
 
       internalUseState = undefined;
       internalUseEffect = undefined;
@@ -60,7 +60,7 @@ export function factory(factoryComponent) {
       this.useEffectStates.forEach(useEffectState => {
         if (
           useEffectState.shouldFire &&
-          useEffectState.shouldFire(this.props) === SKIP_EFFECT
+          useEffectState.shouldFire() === SKIP_EFFECT
         ) {
           return;
         }
@@ -69,7 +69,7 @@ export function factory(factoryComponent) {
           useEffectState.cleanUp();
         }
 
-        useEffectState.cleanUp = useEffectState.effect(this.props);
+        useEffectState.cleanUp = useEffectState.effect();
       });
     }
 

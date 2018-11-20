@@ -15,11 +15,11 @@ How does it look like? Code first for both proposals/changes, then explanations.
 ([codesandbox-example](https://codesandbox.io/s/wk6qq77wkw))
 
 ```jsx
-function FactoryExample(initialProps) {
-  const [getCount, setCount] = useState(initialProps.startCount);
+function FactoryExample(getProps) {
+  const [getCount, setCount] = useState(getProps().startCount);
 
-  useEffect(props => {
-    document.title = `Hi ${props.name}! You clicked ${getCount()} times`;
+  useEffect(() => {
+    document.title = `Hi ${getProps().name}! You clicked ${getCount()} times`;
   });
 
   return props => (
@@ -41,8 +41,8 @@ Have a look at [Motivation factory-pattern](#motivation-factory-pattern) for mor
 
 ```javascript
 useEffect(
-  props => {/* ... no furhter changes */},
-  props => {
+  () => {}, // (...) no furhter changes
+  () => {
     if (mySkippingCondition) {
       return SKIP_EFFECT;
     }
@@ -53,12 +53,16 @@ useEffect(
 Which could be used like (analogous to the [React example](#https://reactjs.org/docs/hooks-effect.html#tip-optimizing-performance-by-skipping-effects)): ([codesandbox-example](https://codesandbox.io/s/2wr71v8zvj))
 
 ```javascript
-useEffect(props => {
-  ChatAPI.subscribeToFriendStatus(props.friend.id, handleStatusChange);
-  return () => {
-    ChatAPI.unsubscribeFriendStatus(props.friend.id, handleStatusChange);
-  };
-}, when(itemsDidNotChanged(props => [props.friend.id]), () => SKIP_EFFECT));
+useEffect(
+  // useEffect-example from react-docs
+  () => {
+    ChatAPI.subscribeToFriendStatus(getProps().friend.id, handleStatusChange);
+    return () => {
+      ChatAPI.unsubscribeFriendStatus(getProps().friend.id, handleStatusChange);
+    };
+  },
+  when(itemsDidNotChanged(() => [getProps().friend.id]), () => SKIP_EFFECT)
+);
 ```
 
 Have a look at [Motivation for skipping effects via flag](#motivation-for-skipping-effects-via-flag) for more information.
@@ -105,13 +109,13 @@ The implemenation of `useState` still needs some "magic" like "some kind of inte
 ```jsx
 // example-component where the render function has no parameter.
 function Example(getProps) {
-  // use* 
+  // use*
   return () => <p>Hi {getProps().name}</p>;
 }
 
 // example-component where the render function has `props` as parameter.
 function Example(getProps) {
-  // use* 
+  // use*
   // note that `props` is available here (like in a normal component)
   return props => <p>Hi {props.name}</p>;
 }
@@ -137,11 +141,11 @@ function Example(getProps) {
 
 #### better testability through the `props` argument
 
-It should be possible and easy to test the render function in isolation. If the render function contains `props` as parameter, it can be extracted and is then like a "normal" (stateless) component and can be shallow-rendered as such. If we look at this example `Counter`-component: 
+It should be possible and easy to test the render function in isolation. If the render function contains `props` as parameter, it can be extracted and is then like a "normal" (stateless) component and can be shallow-rendered as such. If we look at this example `Counter`-component:
 
 ```jsx
 // Counter.js
-import React from 'react';
+import React from "react";
 
 export function renderCounter({ getCount, setCount }) {
   return props => (
@@ -175,44 +179,12 @@ it("should call setCount on button-click", function() {
     getCount: () => 1,
     setCount: mockCallBack
   });
-  
+
   const counter = shallow(<MockedCounter name="test" />);
   counter.find("button").simulate("click");
-  
+
   expect(mockCallBack.mock.calls.length).toEqual(1);
 });
-
-```
-
-### advantages of the factory-pattern
-
-In addition to the motivation described above, there are other advantages to using a wrapping function. These advantages are not emotional and can be quickly proven.
-
-#### get components isolated from state (simpler unit-testing)
-
-[see "better testability through the `props` argument"](#better-testability-through-the-props-argument) above.
-
-#### avoids confusion about initialProps
-
-if we look at
-
-```javascript
-function Example(props) {
-  const [count, setCount] = getCount(props.startCount);
-  // ...
-}
-```
-
-It seems a bit strange that we put the initial value into the function every time, but it is ignored by subsequent calls. This could cause problems if you wonder why a component does not correctly take the values of `props`. The parameter of the factory-function can be precisely called `initialProps`, which makes the usage clearer.
-
-```javascript
-function Example(initialProps) {
-  const [count, setCount] = getCount(initialProps.startCount);
-
-  return props => {
-    /* ... */
-  };
-}
 ```
 
 ## Motivation for skipping effects via flag
@@ -220,6 +192,7 @@ function Example(initialProps) {
 `useEffect` is just great! But skipping effects, by including the second parameter as an array is just not-so-great! ;-) It is some sort of "convention over code". It is simply not necessary, a simple function that passes a flag to control the behavior of the effect is much clearer. It has to be said that the code becomes a bit longer at first, let's take a look at the example from the [React-documentation](https://reactjs.org/docs/hooks-effect.html#tip-optimizing-performance-by-skipping-effects):
 
 ```jsx
+// SYNTAX OF CURRENT REACT-PROPOSAL:
 function Example(props) {
   useEffect(
     () => {
@@ -238,22 +211,22 @@ function Example(props) {
 if we rewrite that with a function and a flag (and the factory-pattern from above): ([codesandbox-example](https://codesandbox.io/s/2wr71v8zvj))
 
 ```jsx
-function Example() {
+function Example(getProps) {
   let prevId;
 
   useEffect(
-    props => {
-      ChatAPI.subscribeToFriendStatus(props.friend.id, handleStatusChange);
+    () => {
+      ChatAPI.subscribeToFriendStatus(getProps().friend.id, handleStatusChange);
       return () => {
-        ChatAPI.unsubscribeFriendStatus(props.friend.id, handleStatusChange);
+        ChatAPI.unsubscribeFriendStatus(getProps().friend.id, handleStatusChange);
       };
     },
-    props => {
-      if (prevId === props.friend.id) {
-        return SKIP_EFFECT; // Only re-subscribe if props.friend.id changes)
+    () => {
+      if (prevId === getProps().friend.id) {
+        return SKIP_EFFECT; // Only re-subscribe if getProps().friend.id changes)
       }
 
-      prevId = props.friend.id;
+      prevId = getProps().friend.id;
     }
   );
 
@@ -263,16 +236,16 @@ function Example() {
 
 Yep, this is more, 8 lines of code more for this example. Now try to find out what happens in the upper and lower function. To understand the upper one you must always remember, "the 2nd parameter in the `useEffect` function is an array, and if at least one of the elements within the array changes between 2 calls, the effect is executed". You can do that, but this behavior is just not intuitive. The 2nd function tells you exactly what is going on only through its code.
 
-However, with this approach, we can use arbitrary behavior. It again offers a lot of space to let the community grow and come up with ideas that nobody can guess at the moment. For example, the current behavior can be easily recreated: ([codesandbox-example](https://codesandbox.io/s/2wr71v8zvj))
+However, with this approach, we can use arbitrary behavior. It offers a lot of space to let the community grow and come up with ideas that nobody can guess at the moment. For example, the current behavior can be easily recreated: ([codesandbox-example](https://codesandbox.io/s/2wr71v8zvj))
 
 ```jsx
-function Example() {
-  useEffect(props => {
-    ChatAPI.subscribeToFriendStatus(props.friend.id, handleStatusChange);
+function Example(getProps) {
+  useEffect(() => {
+    ChatAPI.subscribeToFriendStatus(getProps().friend.id, handleStatusChange);
     return () => {
-      ChatAPI.unsubscribeFriendStatus(props.friend.id, handleStatusChange);
+      ChatAPI.unsubscribeFriendStatus(getProps().friend.id, handleStatusChange);
     };
-  }, when(itemsDidNotChanged(props => [props.friend.id]), () => SKIP_EFFECT));
+  }, when(itemsDidNotChanged(() => [getProps().friend.id]), () => SKIP_EFFECT));
 
   return props => <div>...</div>;
 }
