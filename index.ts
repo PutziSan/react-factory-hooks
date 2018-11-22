@@ -1,7 +1,5 @@
 import * as React from "react";
 
-export const SKIP_EFFECT = "SKIP_EFFECT";
-
 type UseStateReturnValue<T> = [() => T, (value: T) => void];
 type UseState<T> = (initialValue: T) => UseStateReturnValue<T>;
 
