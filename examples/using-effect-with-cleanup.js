@@ -22,10 +22,6 @@ const SubscribeWithEffect = factory(() => {
   return props => {
     const id = props.friend.id;
 
-    if (getIsOnline() === null) {
-      return "Loading...";
-    }
-
     return (
       <>
         <UseEffect
@@ -39,7 +35,10 @@ const SubscribeWithEffect = factory(() => {
           }}
         />
 
-        {getIsOnline() ? "Online" : "Offline"}
+        {getIsOnline() === null && "Loading..."}
+
+        {getIsOnline() !== null && getIsOnline() && "Online"}
+        {getIsOnline() !== null && !getIsOnline() && "Offline"}
       </>
     );
   };

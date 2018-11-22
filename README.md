@@ -1,3 +1,10 @@
+#react-hooks with the factory-pattern
+
+This is a counter-proposal to the [current hooks proposal](https://reactjs.org/docs/hooks-intro.html) of the React team.
+The reasons and other questions are answered in the [FAQ](#faq) below (especially [Why the factory-pattern if the current react-proposal is so popular?](#why-the-factory-pattern-if-the-current-react-proposal-is-so-popular)).
+
+You can also find a [list of live-demos](#live-examplesworking-demos) in the FAQs below.
+
 ## basic usage
 
 A normal "stateful" functional Component looks like this:
@@ -23,30 +30,31 @@ function Counter() {
 - [table of contents](#table-of-contents)
 - [Component-Lifecycle for a factory-component](#component-lifecycle-for-a-factory-component)
 - [basic hooks API reference](#basic-hooks-api-reference)
-  * [factory function](#factory-function)
-  * [`useState`](#usestate)
-  * [`useEffect` (not recommended)](#useeffect-not-recommended)
-  * [`useContext`](#usecontext)
-  * [additional hooks](#additional-hooks)
-    + [`useReducer`](#usereducer)
-    + [`useCallback`](#usecallback)
-    + [`useMemo`](#usememo)
-    + [`useRef`](#useref)
-    + [`useImperativeMethods`](#useimperativemethods)
-    + [`useMutationEffect` and `useLayoutEffect` (not recommended)](#usemutationeffect-and-uselayouteffect-not-recommended)
+  - [factory function](#factory-function)
+  - [`useState`](#usestate)
+  - [`useEffect` (not recommended)](#useeffect-not-recommended)
+  - [`useContext`](#usecontext)
+  - [additional hooks](#additional-hooks)
+    - [`useReducer`](#usereducer)
+    - [`useCallback`](#usecallback)
+    - [`useMemo`](#usememo)
+    - [`useRef`](#useref)
+    - [`useImperativeMethods`](#useimperativemethods)
+    - [`useMutationEffect` and `useLayoutEffect` (not recommended)](#usemutationeffect-and-uselayouteffect-not-recommended)
 - [advanced usage (custom hooks)](#advanced-usage-custom-hooks)
-  * [custom hook example](#custom-hook-example)
-  * [`useEffect`](#useeffect)
-  * [possibilities to customize `useEffect`.](#possibilities-to-customize-useeffect)
-- [faq](#faq)
-  * [Why the factory-pattern if the current react-proposal is so popular?](#why-the-factory-pattern-if-the-current-react-proposal-is-so-popular)
-  * [But how can I realize side effects in my functional components?](#but-how-can-i-realize-side-effects-in-my-functional-components)
-  * [what is a factory function and a render function](#what-is-a-factory-function-and-a-render-function)
-  * [TypeScript-typings?](#typescript-typings)
-  * [Why the getter functions overall? #toomuchnoise](#why-the-getter-functions-overall-%23toomuchnoise)
+  - [custom hook example](#custom-hook-example)
+  - [`useEffect`](#useeffect)
+  - [possibilities to customize `useEffect`.](#possibilities-to-customize-useeffect)
+- [FAQ](#faq)
+  - [Why the factory-pattern if the current react-proposal is so popular?](#why-the-factory-pattern-if-the-current-react-proposal-is-so-popular)
+  - [live-examples/working demos?](#live-examplesworking-demos)
+  - [But how can I realize side effects in my functional components?](#but-how-can-i-realize-side-effects-in-my-functional-components)
+  - [what is a factory function and a render function](#what-is-a-factory-function-and-a-render-function)
+  - [TypeScript-typings?](#typescript-typings)
+  - [Why the getter functions overall? #toomuchnoise](#why-the-getter-functions-overall-%23toomuchnoise)
 - [history](#history)
-  * [first draft - `props` overall](#first-draft---props-overall)
-  * [second draft - `getProps` in the wrapping function](#second-draft---getprops-in-the-wrapping-function)
+  - [first draft - `props` overall](#first-draft---props-overall)
+  - [second draft - `getProps` in the wrapping function](#second-draft---getprops-in-the-wrapping-function)
 
 ## Component-Lifecycle for a factory-component
 
@@ -361,7 +369,7 @@ function useMemoizedEffect(effectFn) {
 }
 ```
 
-## faq
+## FAQ
 
 Answers to a few questions that I can imagine will come up more often.
 
@@ -376,6 +384,17 @@ I believe that although the idea is very popular, the current implementation pro
 The "magic" can be better explained by this suggestion (see [Component-Lifecycle for a factory-component](#component-lifecycle-for-a-factory-component) above) and the "rules of hooks" apply to this proposal as well, but they are now intuitively forced by the language of JavaScript (by variable scopes) and work as expected.
 
 And finally, my suggestion can make the API leaner, since many current use\* functions can be mapped by normal JavaScript features and so no new API has to be learned (see [additional hooks](#additional-hooks) above).
+
+### live-examples/working demos?
+
+I published a basic implementation under this package (`yarn add react-factory-hooks`), where I implemented `useEffect` and `useState` via a `factory`-HOC.
+
+Here are some live-demos via codesandbox, using this package:
+
+- [Basic example (Counter)](https://codesandbox.io/s/oqnv17m86)
+- [Counter example with an effect](https://codesandbox.io/s/wk6qq77wkw)
+- [example of an effect/state via a factory and a `UseEffect`-component](https://codesandbox.io/s/kmvqp258nr)
+- [custom hook example](https://codesandbox.io/s/2wr71v8zvj)
 
 ### But how can I realize side effects in my functional components?
 

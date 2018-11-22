@@ -15,14 +15,14 @@ function useFriendStatus() {
   const [getIsOnline, setIsOnline] = useState(null);
 
   function handleStatusChange(status) {
-    setIsOnline(status.isOnline);
+    setIsOnline(status ? status.isOnline : null);
   }
 
   const friendEffect = useEffect(
     friendId => {
       ChatAPI.subscribeToFriendStatus(friendId, handleStatusChange);
       return () => {
-        ChatAPI.unsubscribeFromFriendStatus(friendId, handleStatusChange);
+        ChatAPI.unsubscribeFriendStatus(friendId, handleStatusChange);
       };
     },
     friendId => [friendId]

@@ -1,7 +1,5 @@
 import React from "react";
 
-export const SKIP_EFFECT = "SKIP_EFFECT";
-
 let internalUseState;
 export function useState(initialValue) {
   if (!internalUseState) {
@@ -19,7 +17,7 @@ export function useEffect(effect, shouldFire) {
       "Factory-hooks must be used inside a factory-component. You must wrap your factory-components with `factory(factoryComponent)`"
     );
   }
-  internalUseEffect(effect, shouldFire);
+  return internalUseEffect(effect, shouldFire);
 }
 
 function arrayElementsEqu(a, b) {
@@ -68,7 +66,7 @@ export function factory(factoryComponent) {
         return [getState, setState];
       };
 
-      internalUseEffect = (effect, shouldFire    ) => {
+      internalUseEffect = (effect, shouldFire) => {
         inc++;
         const effectKey = `use_state_${inc}`;
 
