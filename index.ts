@@ -1,28 +1,56 @@
-import React from "react";
+import * as React from "react";
 
 export const SKIP_EFFECT = "SKIP_EFFECT";
 
-let internalUseState;
-export function useState(initialValue) {
+type UseStateReturnValue<T> = [() => T, (value: T) => void];
+type UseState<T> = (initialValue: T) => UseStateReturnValue<T>;
+
+type EffectCleanUp = () => void;
+type Effect<T extends any[]> = (...params: T) => void | EffectCleanUp;
+type ShouldEffectFire<T extends any[]> = (...params: T) => any[];
+type UseEffect<T extends any[]> = (
+  effect: Effect<T>,
+  shouldFire?: ShouldEffectFire<T>
+) => (...params: T) => void;
+
+type EffectToDo = { effectKey: string; params: any[] };
+
+type Effects = {
+  [key: string]: { effect: Effect<any[]>; cleanup?: EffectCleanUp };
+};
+
+type FactoryState = {
+  [key: string]: any;
+};
+
+let internalUseState: UseState<any> | undefined;
+
+export function useState<T>(initialValue: T): UseStateReturnValue<T> {
   if (!internalUseState) {
     throw new Error(
       "Factory-hooks must be used inside a factory-component. You must wrap your factory-components with `factory(factoryComponent)`"
     );
   }
+
   return internalUseState(initialValue);
 }
 
-let internalUseEffect;
-export function useEffect(effect, shouldFire) {
+let internalUseEffect: UseEffect<any> | undefined;
+
+export function useEffect<T extends any[]>(
+  effect: Effect<T>,
+  shouldFire?: ShouldEffectFire<T>
+): (...params: T) => void {
   if (!internalUseEffect) {
     throw new Error(
       "Factory-hooks must be used inside a factory-component. You must wrap your factory-components with `factory(factoryComponent)`"
     );
   }
-  internalUseEffect(effect, shouldFire);
+
+  return internalUseEffect(effect, shouldFire);
 }
 
-function arrayElementsEqu(a, b) {
+function arrayElementsEqu(a?: any[], b?: any[]) {
   if (!a || !b) {
     return a === b;
   }
@@ -43,9 +71,16 @@ function arrayElementsEqu(a, b) {
   return true;
 }
 
-export function factory(factoryComponent) {
-  return class WithFactory extends React.Component {
-    constructor(props) {
+export function factory<T extends {}>(
+  factoryComponent: (initialProps: T) => (props: T) => React.ReactNode
+) {
+  return class WithFactory extends React.Component<T, FactoryState> {
+    renderFunc: (props: T) => React.ReactNode;
+
+    effects: Effects;
+    effectToDoStack: EffectToDo[];
+
+    constructor(props: T) {
       super(props);
 
       let inc = 0;
@@ -55,29 +90,32 @@ export function factory(factoryComponent) {
 
       this.effectToDoStack = [];
 
-      internalUseState = initialValue => {
+      internalUseState = (initialValue: any) => {
         inc++;
         const stateKey = `use_state_${inc}`;
 
         // this breaks the readonly rule, but since it is only used during initialization, it should be fine
+        // @ts-ignore
         this.state[stateKey] = initialValue;
 
         const getState = () => this.state[stateKey];
-        const setState = val => this.setState({ [stateKey]: val });
+        const setState = (val: any) => this.setState({ [stateKey]: val });
 
         return [getState, setState];
       };
 
-      internalUseEffect = (effect, shouldFire) => {
+      internalUseEffect = (
+        effect: Effect<any[]>,
+        shouldFire?: ShouldEffectFire<any[]>
+      ) => {
         inc++;
         const effectKey = `use_state_${inc}`;
 
         this.effects[effectKey] = { effect };
 
-        let lastShouldFireResult;
-        let lastEffectCleanup;
+        let lastShouldFireResult: any[] | undefined;
 
-        return (...params) => {
+        return (...params: any[]) => {
           if (shouldFire) {
             const newShouldFireResult = shouldFire(...params);
 
@@ -89,23 +127,6 @@ export function factory(factoryComponent) {
           }
 
           this.effectToDoStack.push({ effectKey, params });
-
-          // wenn der letzte Effekt eine cleanUp-Funktion zurückgegeben hat, muss sie ausgeführt werden
-          if (lastEffectCleanup) {
-            lastEffectCleanup();
-            // remove lastEffectCleanup from this.effectCleanups, since the cleanup was performed
-            this.effectCleanups.splice(
-              this.effectCleanups.indexOf(lastEffectCleanup),
-              1
-            );
-          }
-
-          lastEffectCleanup = effect(...params);
-
-          if (lastEffectCleanup) {
-            // add the the new cleanup to this.effectCleanups, so that cleanup can also be done when unmounting the component.
-            this.effectCleanups.push(lastEffectCleanup);
-          }
         };
       };
 
@@ -117,30 +138,17 @@ export function factory(factoryComponent) {
 
     fireEffects() {
       while (this.effectToDoStack.length > 0) {
-        const { effectKey, params } = this.effectToDoStack.pop();
+        const { effectKey, params } = this.effectToDoStack.pop() as EffectToDo;
         const { effect, cleanup } = this.effects[effectKey];
 
         if (cleanup) {
           cleanup();
         }
 
-        this.effects[effectKey].cleanup = effect(params);
+        this.effects[effectKey].cleanup = effect(params) as
+          | EffectCleanUp
+          | undefined; // return-type void is not undefined in TS, so explicitly casting is necessary;;
       }
-
-      this.useEffectStates.forEach(useEffectState => {
-        if (
-          useEffectState.shouldFire &&
-          useEffectState.shouldFire() === SKIP_EFFECT
-        ) {
-          return;
-        }
-
-        if (useEffectState.cleanUp) {
-          useEffectState.cleanUp();
-        }
-
-        useEffectState.cleanUp = useEffectState.effect();
-      });
     }
 
     componentDidMount() {
@@ -153,8 +161,10 @@ export function factory(factoryComponent) {
 
     componentWillUnmount() {
       for (const effectKey in this.effects) {
-        if (this.effects[effectKey].cleanup) {
-          this.effects[effectKey].cleanup();
+        const cleanup = this.effects[effectKey].cleanup;
+
+        if (cleanup) {
+          cleanup();
         }
       }
     }

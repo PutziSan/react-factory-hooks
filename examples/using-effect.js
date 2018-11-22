@@ -1,6 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom";
-import { factory, useState, useEffect } from "react-factory-hooks";
+import { factory, useState, useEffect } from "index";
 
 const SimpleCounterWithEffect = factory(() => {
   const [getCount, setCount] = useState(0);

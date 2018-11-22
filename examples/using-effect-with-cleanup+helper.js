@@ -1,6 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom";
-import { factory, useState, useEffect, SKIP_EFFECT } from "react-factory-hooks";
+import { factory, useState, useEffect, SKIP_EFFECT } from "index";
 import { itemsDidNotChanged, when } from "./should-effect-fire-helper";
 
 const ChatAPI = {
