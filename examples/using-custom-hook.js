@@ -1,7 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom";
-import { factory, useState, useEffect, SKIP_EFFECT } from "index";
-import { itemsDidNotChanged, when } from "./should-effect-fire-helper";
+import { factory, useEffect, useState } from "react-factory-hooks";
 
 const ChatAPI = {
   subscribeToFriendStatus: (friendId, onStatusChange) => {
@@ -12,26 +11,39 @@ const ChatAPI = {
   }
 };
 
-const SubscribeWithEffect = factory(() => {
+function useFriendStatus() {
   const [getIsOnline, setIsOnline] = useState(null);
 
   function handleStatusChange(status) {
     setIsOnline(status ? status.isOnline : null);
   }
 
-  useEffect(props => {
-    ChatAPI.subscribeToFriendStatus(props.friend.id, handleStatusChange);
-    return () => {
-      ChatAPI.unsubscribeFriendStatus(props.friend.id, handleStatusChange);
-    };
-  }, when(itemsDidNotChanged(props => [props.friend.id]), () => SKIP_EFFECT));
+  const friendEffect = useEffect(
+    friendId => {
+      ChatAPI.subscribeToFriendStatus(friendId, handleStatusChange);
+      return () => {
+        ChatAPI.unsubscribeFriendStatus(friendId, handleStatusChange);
+      };
+    },
+    friendId => [friendId]
+  );
 
-  return () => {
-    if (getIsOnline() === null) {
-      return "Loading...";
+  return friendId => {
+    friendEffect(friendId);
+    return getIsOnline();
+  };
+}
+
+const FriendStatus = factory(() => {
+  const getIsFriendOnline = useFriendStatus();
+
+  return props => {
+    const isOnline = getIsFriendOnline(props.friend.id);
+
+    if (isOnline === null) {
+      return "loading...";
     }
-
-    return getIsOnline() ? "Online" : "Offline";
+    return isOnline ? "Online" : "Offline";
   };
 });
 
@@ -45,7 +57,7 @@ const App = factory(() => {
         onChange={e => setFriendId(e.target.value)}
       />
       <div>
-        {getFriendId()}: <SubscribeWithEffect friend={{ id: getFriendId() }} />
+        {getFriendId()}: <FriendStatus friend={{ id: getFriendId() }} />
       </div>
     </div>
   );

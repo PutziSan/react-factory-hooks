@@ -1,19 +1,24 @@
 import React from "react";
 import ReactDOM from "react-dom";
-import { factory, useState, useEffect } from "index";
+import { factory, useEffect, useState } from "react-factory-hooks";
+import { UseEffect } from "./example-helper";
 
 const SimpleCounterWithEffect = factory(() => {
   const [getCount, setCount] = useState(0);
 
-  useEffect(() => {
-    document.title = `You clicked ${getCount()} times`;
-  });
-
   return () => (
-    <div>
-      <p>You clicked {getCount()} times</p>
-      <button onClick={() => setCount(getCount() + 1)}>Click me</button>
-    </div>
+    <>
+      <UseEffect
+        effect={() => {
+          document.title = `You clicked ${getCount()} times`;
+        }}
+      />
+
+      <div>
+        <p>You clicked {getCount()} times</p>
+        <button onClick={() => setCount(getCount() + 1)}>Click me</button>
+      </div>
+    </>
   );
 });
 

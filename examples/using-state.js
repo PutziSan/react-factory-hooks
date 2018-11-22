@@ -2,8 +2,8 @@ import React from "react";
 import ReactDOM from "react-dom";
 import { factory, useState } from "index";
 
-const SimpleCounter = factory(getProps => {
-  const [getCount, setCount] = useState(getProps().startCount);
+const SimpleCounter = factory(initialProps => {
+  const [getCount, setCount] = useState(initialProps.startCount);
 
   return () => (
     <div>

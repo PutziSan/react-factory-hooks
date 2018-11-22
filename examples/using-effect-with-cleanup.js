@@ -1,6 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom";
-import { factory, useState, useEffect, SKIP_EFFECT } from "index";
+import { factory, useState, useEffect, SKIP_EFFECT } from "react-factory-hooks";
+import { UseEffect } from "./example-helper";
 
 const ChatAPI = {
   subscribeToFriendStatus: (friendId, onStatusChange) => {
@@ -18,42 +19,39 @@ const SubscribeWithEffect = factory(() => {
     setIsOnline(status ? status.isOnline : null);
   }
 
-  let prevId;
+  return props => {
+    const id = props.friend.id;
 
-  useEffect(
-    props => {
-      ChatAPI.subscribeToFriendStatus(props.friend.id, handleStatusChange);
-      return () => {
-        ChatAPI.unsubscribeFriendStatus(props.friend.id, handleStatusChange);
-      };
-    },
-    props => {
-      // Only re-subscribe if props.friend.id changes
-      if (prevId === props.friend.id) {
-        return SKIP_EFFECT;
-      }
+    return (
+      <>
+        <UseEffect
+          whenItemsDidChange={[id]}
+          effect={() => {
+            ChatAPI.subscribeToFriendStatus(id, handleStatusChange);
 
-      prevId = props.friend.id;
-    }
-  );
+            return () => {
+              ChatAPI.unsubscribeFriendStatus(id, handleStatusChange);
+            };
+          }}
+        />
 
-  return () => {
-    if (getIsOnline() === null) {
-      return "Loading...";
-    }
+        {getIsOnline() === null && "Loading..."}
 
-    return getIsOnline() ? "Online" : "Offline";
+        {getIsOnline() !== null && getIsOnline() && "Online"}
+        {getIsOnline() !== null && !getIsOnline() && "Offline"}
+      </>
+    );
   };
 });
 
 const App = factory(() => {
-  const [getFriendId, setFreindId] = useState("1");
+  const [getFriendId, setFriendId] = useState("1");
 
   return () => (
     <div>
       <input
         value={getFriendId()}
-        onChange={e => setFreindId(e.target.value)}
+        onChange={e => setFriendId(e.target.value)}
       />
       <div>
         {getFriendId()}: <SubscribeWithEffect friend={{ id: getFriendId() }} />

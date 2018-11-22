@@ -1,7 +1,5 @@
 import React from "react";
 
-export const SKIP_EFFECT = "SKIP_EFFECT";
-
 let internalUseState;
 export function useState(initialValue) {
   if (!internalUseState) {
@@ -19,7 +17,7 @@ export function useEffect(effect, shouldFire) {
       "Factory-hooks must be used inside a factory-component. You must wrap your factory-components with `factory(factoryComponent)`"
     );
   }
-  internalUseEffect(effect, shouldFire);
+  return internalUseEffect(effect, shouldFire);
 }
 
 function arrayElementsEqu(a, b) {
@@ -75,7 +73,6 @@ export function factory(factoryComponent) {
         this.effects[effectKey] = { effect };
 
         let lastShouldFireResult;
-        let lastEffectCleanup;
 
         return (...params) => {
           if (shouldFire) {
@@ -88,24 +85,8 @@ export function factory(factoryComponent) {
             lastShouldFireResult = newShouldFireResult;
           }
 
+          // effectToDoStack is
           this.effectToDoStack.push({ effectKey, params });
-
-          // wenn der letzte Effekt eine cleanUp-Funktion zurückgegeben hat, muss sie ausgeführt werden
-          if (lastEffectCleanup) {
-            lastEffectCleanup();
-            // remove lastEffectCleanup from this.effectCleanups, since the cleanup was performed
-            this.effectCleanups.splice(
-              this.effectCleanups.indexOf(lastEffectCleanup),
-              1
-            );
-          }
-
-          lastEffectCleanup = effect(...params);
-
-          if (lastEffectCleanup) {
-            // add the the new cleanup to this.effectCleanups, so that cleanup can also be done when unmounting the component.
-            this.effectCleanups.push(lastEffectCleanup);
-          }
         };
       };
 
@@ -126,21 +107,6 @@ export function factory(factoryComponent) {
 
         this.effects[effectKey].cleanup = effect(params);
       }
-
-      this.useEffectStates.forEach(useEffectState => {
-        if (
-          useEffectState.shouldFire &&
-          useEffectState.shouldFire() === SKIP_EFFECT
-        ) {
-          return;
-        }
-
-        if (useEffectState.cleanUp) {
-          useEffectState.cleanUp();
-        }
-
-        useEffectState.cleanUp = useEffectState.effect();
-      });
     }
 
     componentDidMount() {
