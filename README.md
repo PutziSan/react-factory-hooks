@@ -1,4 +1,4 @@
-#react-hooks with the factory-pattern
+# react-hooks with the factory-pattern
 
 This is a counter-proposal to the [current hooks proposal](https://reactjs.org/docs/hooks-intro.html) of the React team.
 The reasons and other questions are answered in the [FAQ](#faq) below (especially [Why the factory-pattern if the current react-proposal is so popular?](#why-the-factory-pattern-if-the-current-react-proposal-is-so-popular)).
