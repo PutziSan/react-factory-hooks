@@ -17,6 +17,37 @@ function Counter() {
 }
 ```
 
+## table of contents
+
+- [basic usage](#basic-usage)
+- [table of contents](#table-of-contents)
+- [Component-Lifecycle for a factory-component](#component-lifecycle-for-a-factory-component)
+- [basic hooks API reference](#basic-hooks-api-reference)
+  * [factory function](#factory-function)
+  * [`useState`](#usestate)
+  * [`useEffect` (not recommended)](#useeffect-not-recommended)
+  * [`useContext`](#usecontext)
+  * [additional hooks](#additional-hooks)
+    + [`useReducer`](#usereducer)
+    + [`useCallback`](#usecallback)
+    + [`useMemo`](#usememo)
+    + [`useRef`](#useref)
+    + [`useImperativeMethods`](#useimperativemethods)
+    + [`useMutationEffect` and `useLayoutEffect` (not recommended)](#usemutationeffect-and-uselayouteffect-not-recommended)
+- [advanced usage (custom hooks)](#advanced-usage-custom-hooks)
+  * [custom hook example](#custom-hook-example)
+  * [`useEffect`](#useeffect)
+  * [possibilities to customize `useEffect`.](#possibilities-to-customize-useeffect)
+- [faq](#faq)
+  * [Why the factory-pattern if the current react-proposal is so popular?](#why-the-factory-pattern-if-the-current-react-proposal-is-so-popular)
+  * [But how can I realize side effects in my functional components?](#but-how-can-i-realize-side-effects-in-my-functional-components)
+  * [what is a factory function and a render function](#what-is-a-factory-function-and-a-render-function)
+  * [TypeScript-typings?](#typescript-typings)
+  * [Why the getter functions overall? #toomuchnoise](#why-the-getter-functions-overall-%23toomuchnoise)
+- [history](#history)
+  * [first draft - `props` overall](#first-draft---props-overall)
+  * [second draft - `getProps` in the wrapping function](#second-draft---getprops-in-the-wrapping-function)
+
 ## Component-Lifecycle for a factory-component
 
 The Component-Lifecycle with a factory-function changes a little bit. Before rendering a component for the first time, the factory function is executed once (similar to the constructor in a class component), which returns the render function. For subsequent rendering, only the render function is executed again.
