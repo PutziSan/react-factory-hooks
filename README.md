@@ -325,9 +325,9 @@ differences to current react-proposal:
 - the effect-function can have parameters
 - the second parameter must be a function which returns the array
 
-### possibilities to customize `useEffect`.
+### possibilities to customize `useEffect`
 
-This form makes it easy to create customized versions of `useEffect`. For example, a version could be `useMemoizedEffect`, which could implement the [skipping-effects-example](https://reactjs.org/docs/hooks-effect.html#tip-optimizing-performance-by-skipping-effects) accordingly::
+This form makes it easy to create customized versions of `useEffect`. For example, a version could be `useMemoizedEffect`, which could implement the [skipping-effects-example](https://reactjs.org/docs/hooks-effect.html#tip-optimizing-performance-by-skipping-effects) accordingly:
 
 ```javascript
 function useFriendStatus() {
