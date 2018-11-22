@@ -22,6 +22,27 @@ export function useEffect(effect, shouldFire) {
   internalUseEffect(effect, shouldFire);
 }
 
+function arrayElementsEqu(a, b) {
+  if (!a || !b) {
+    return a === b;
+  }
+
+  const lenA = a.length;
+  const lenB = b.length;
+
+  if (lenA !== lenB) {
+    return false;
+  }
+
+  for (let i = 0; i < lenA; i++) {
+    if (a[i] !== b[i]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 export function factory(factoryComponent) {
   return class WithFactory extends React.Component {
     constructor(props) {
@@ -30,11 +51,12 @@ export function factory(factoryComponent) {
       let inc = 0;
 
       this.state = {};
-      this.useEffectStates = [];
+      this.effects = {};
+
+      this.effectToDoStack = [];
 
       internalUseState = initialValue => {
         inc++;
-
         const stateKey = `use_state_${inc}`;
 
         // this breaks the readonly rule, but since it is only used during initialization, it should be fine
@@ -46,31 +68,47 @@ export function factory(factoryComponent) {
         return [getState, setState];
       };
 
-      internalUseEffect = (effect, shouldFire) => {
-        this.useEffectStates.push({ effect, shouldFire });
+      internalUseEffect = (effect, shouldFire    ) => {
+        inc++;
+        const effectKey = `use_state_${inc}`;
+
+        this.effects[effectKey] = { effect };
+
+        let lastShouldFireResult;
+
+        return (...params) => {
+          if (shouldFire) {
+            const newShouldFireResult = shouldFire(...params);
+
+            if (arrayElementsEqu(newShouldFireResult, lastShouldFireResult)) {
+              return;
+            }
+
+            lastShouldFireResult = newShouldFireResult;
+          }
+
+          // effectToDoStack is
+          this.effectToDoStack.push({ effectKey, params });
+        };
       };
 
-      this.renderFunc = factoryComponent(() => this.props);
+      this.renderFunc = factoryComponent(props);
 
       internalUseState = undefined;
       internalUseEffect = undefined;
     }
 
     fireEffects() {
-      this.useEffectStates.forEach(useEffectState => {
-        if (
-          useEffectState.shouldFire &&
-          useEffectState.shouldFire() === SKIP_EFFECT
-        ) {
-          return;
+      while (this.effectToDoStack.length > 0) {
+        const { effectKey, params } = this.effectToDoStack.pop();
+        const { effect, cleanup } = this.effects[effectKey];
+
+        if (cleanup) {
+          cleanup();
         }
 
-        if (useEffectState.cleanUp) {
-          useEffectState.cleanUp();
-        }
-
-        useEffectState.cleanUp = useEffectState.effect();
-      });
+        this.effects[effectKey].cleanup = effect(params);
+      }
     }
 
     componentDidMount() {
@@ -82,7 +120,11 @@ export function factory(factoryComponent) {
     }
 
     componentWillUnmount() {
-      this.useEffectStates.forEach(({ cleanUp }) => cleanUp && cleanUp());
+      for (const effectKey in this.effects) {
+        if (this.effects[effectKey].cleanup) {
+          this.effects[effectKey].cleanup();
+        }
+      }
     }
 
     render() {
