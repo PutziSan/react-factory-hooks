@@ -68,7 +68,7 @@ export function factory(factoryComponent) {
 
       internalUseEffect = (effect, shouldFire) => {
         inc++;
-        const effectKey = `use_state_${inc}`;
+        const effectKey = `use_effect_${inc}`;
 
         this.effects[effectKey] = { effect };
 
