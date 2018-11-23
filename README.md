@@ -165,10 +165,12 @@ Whenever the effect is called in a render cycle, the effect function is executed
 
 differences to current react-proposal:
 
-- an effect will not execute itself, but must always be called during a render cycle
+
+- `useEffect` returns a function (the "effect")
+- an effect (the returned function of an `useEffect`-call) will not execute itself, but must always be called during a render cycle
 - `useEffect` has no possibility to access the current `props` (see [factory function](#factory-function) above)
   - this is per design, because custom hooks have to be independent from the components
-  - if you want to access `props` in an effect, see [the FAQ below](#but-how-can-i-realize-side-effects-in-my-functional-components)
+  - To use variables from `props`, you must pass them to the effect as parameters
 - the effect-function can have parameters
 - the second parameter must be a function which returns the array
 
