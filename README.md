@@ -419,7 +419,7 @@ function useMemoizedEffect(effectFn) {
 
   let lastParams;
   return (...params) => {
-    // arrayElementsEqu-implentation omitted
+    // arrayElementsEqu-implementation omitted
     // (it checks whether the elements in both arrays are the same for each index (using `===`))
     if (arrayElementsEqu(params, lastParams)) {
       return;
