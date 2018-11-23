@@ -32,7 +32,7 @@ function Counter() {
 - [basic hooks API reference](#basic-hooks-api-reference)
   - [factory function](#factory-function)
   - [`useState`](#usestate)
-  - [`useEffect` (not recommended)](#useeffect-not-recommended)
+  - [`useEffect`](#useeffect)
   - [`useContext`](#usecontext)
   - [additional hooks](#additional-hooks)
     - [`useReducer`](#usereducer)
@@ -40,18 +40,20 @@ function Counter() {
     - [`useMemo`](#usememo)
     - [`useRef`](#useref)
     - [`useImperativeMethods`](#useimperativemethods)
-    - [`useMutationEffect` and `useLayoutEffect` (not recommended)](#usemutationeffect-and-uselayouteffect-not-recommended)
+    - [`useMutationEffect` and `useLayoutEffect`](#usemutationeffect-and-uselayouteffect)
+- [how does `useEffect` works](#how-does-useeffect-works)
+  - [when will `useEffect` be executed?](#when-will-useeffect-be-executed)
+  - [skipping effects](#skipping-effects)
+  - [possibilities to customize `useEffect`, example: `useMemoizedEffect`](#possibilities-to-customize-useeffect-example-usememoizedeffect)
 - [advanced usage (custom hooks)](#advanced-usage-custom-hooks)
   - [custom hook example](#custom-hook-example)
-  - [`useEffect`](#useeffect)
-  - [possibilities to customize `useEffect`.](#possibilities-to-customize-useeffect)
 - [FAQ](#faq)
   - [Why the factory-pattern if the current react-proposal is so popular?](#why-the-factory-pattern-if-the-current-react-proposal-is-so-popular)
   - [live-examples/working demos?](#live-examplesworking-demos)
-  - [But how can I realize side effects in my functional components?](#but-how-can-i-realize-side-effects-in-my-functional-components)
   - [what is a factory function and a render function](#what-is-a-factory-function-and-a-render-function)
   - [TypeScript-typings?](#typescript-typings)
   - [Why the getter functions overall? #toomuchnoise](#why-the-getter-functions-overall-%23toomuchnoise)
+  - [Adding a simple effect without an additional local state to my functional component is too complicated, how can i avoid it?](#adding-a-simple-effect-without-an-additional-local-state-to-my-functional-component-is-too-complicated-how-can-i-avoid-it)
 - [history](#history)
   - [first draft - `props` overall](#first-draft---props-overall)
   - [second draft - `getProps` in the wrapping function](#second-draft---getprops-in-the-wrapping-function)
@@ -111,8 +113,6 @@ function Example(initialProps) {
 
 Be careful, `initialProps` will not change! It will always point to the the props-object with which it was called the first time it was rendered.
 
-If you want to access the current `props` in an "effect" (as it is possible in the current proposal by the react-team), see [But how can I realize side effects in my functional components?](#but-how-can-i-realize-side-effects-in-my-functional-components) below.
-
 ### `useState`
 
 ```jsx
@@ -127,14 +127,50 @@ differences to current react-proposal:
 
 The rest is congruent with the current proposal, see [React-Docs - `useState`-API](https://reactjs.org/docs/hooks-reference.html#usestate).
 
-### `useEffect` (not recommended)
+### `useEffect`
 
-This function is not recommended for basic use.
+```jsx
+const effect = useEffect(
+  (...params) => {
+    /* your effect-function */
 
-- if you want to execute an side effect in your component, have a look at [But how can I realize side effects in my functional components?](#but-how-can-i-realize-side-effects-in-my-functional-components).
-- if you want to access lifecycle-events (or now called "effects") in a custom hook, see [advanced usage (custom hooks)](#advanced-usage-custom-hooks) below
+    // the effect-function can optionally return a cleanup-handler
+    return () => {
+      /* ... cleanup */
+    };
+  },
+  /* optional: */ (...params) => [
+    /* ... conditionally firing an effect */
+  ]
+);
+```
 
-> In a later documentation `useEffect` should no longer appear under "basic API reference". It is currently only listed here to follow the React documentation.
+`useEffect` returns an executable function (the "effect") during the factory-phase. You can then use your created effect in your render-function:
+
+```jsx
+function ExampleEffect() {
+  const docTitleEffect = useEffect(name => {
+    document.title = `Hi ${name}!`;
+  });
+
+  return props => {
+    docTitleEffect(props.name);
+
+    return <div>...</div>;
+  };
+}
+```
+
+Whenever the effect is called in a render cycle, the effect function is executed with the parameters passed to the effect (but only after rendering is finished). If the component is unmounted, the last cleanup handler (if specified) is executed.
+
+differences to current react-proposal:
+
+- an effect will not execute itself, but must always be called during a render cycle
+- `useEffect` has no possibility to access the current `props` (see [factory function](#factory-function) above)
+  - this is per design, because custom hooks have to be independent from the components
+  - if you want to access `props` in an effect, see [the FAQ below](#but-how-can-i-realize-side-effects-in-my-functional-components)
+- the effect-function can have parameters
+- the second parameter must be a function which returns the array
 
 ### `useContext`
 
@@ -209,22 +245,19 @@ function Example() {
 
 #### `useRef`
 
-**removed** - this can be done with the normal [`React.createRef`](https://reactjs.org/docs/react-api.html#reactcreateref):
+**removed** - this can be done with the normal [`React.createRef`](https://reactjs.org/docs/react-api.html#reactcreateref) or a normal js-variable (`let`):
 
 ```jsx
 function Example() {
+  // to get the ref of of the dom-element, use `React.createRef()`:
   const inputEl = React.createRef();
-  const onButtonClick = () => {
-    // `current` points to the mounted text input element
-    inputEl.current.focus();
-  };
+  // to get a mutable variable use `let`:
+  let name;
 
-  return props => (
-    <>
-      <input ref={inputEl} type="text" />
-      <button onClick={onButtonClick}>Focus the input</button>
-    </>
-  );
+  return props => {
+    name = props.name;
+    return <input ref={inputEl} type="text" />;
+  };
 }
 ```
 
@@ -234,34 +267,57 @@ function Example() {
 
 > To be honest, I don't fully understand the meaning of this hook and I have no idea how it works internally. Maybe it can also be replaced with a normal JS construct. To be honest, I don't fully understand the meaning of this hook and I have no idea how it works internally. Maybe it can also be replaced with a normal JS construct. Otherwise it could be taken over exactly as currently described in the documentation.
 
-#### `useMutationEffect` and `useLayoutEffect` (not recommended)
+#### `useMutationEffect` and `useLayoutEffect`
 
-These functions are not recommended for basic use.
+> Prefer the standard [`useEffect`](#useeffect) when possible to avoid blocking visual updates.
 
-- if you want to execute an side effect in your component, have a look at [But how can I realize side effects in my functional components?](#but-how-can-i-realize-side-effects-in-my-functional-components).
-- if you want to access lifecycle-events (or now called "effects") in a custom hook, see [advanced usage (custom hooks)](#advanced-usage-custom-hooks) below
+The signature is identical to [`useEffect`](#useeffect). Otherwise, the behavior is similar to that [described in the React documentation](https://reactjs.org/docs/hooks-reference.html#usemutationeffect).
 
-> In a later documentation `useMutationEffect` and `useLayoutEffect` should no longer appear under "basic API reference". It is currently only listed here to follow the React documentation.
+## how does `useEffect` works
 
-## advanced usage (custom hooks)
-
-One of the biggest strengths of hooks is that you can easily build your own hooks to build logic independent of components (see react-documentation: ["Building Your Own Hooks"](https://reactjs.org/docs/hooks-custom.html)).
-
-This proposal also makes this possible. An example of this can be seen below.
-
-To be able to access "effects" (lifecycle-events) independently from a component, the `useEffect` API is additionally provided.
-
-### custom hook example
-
-The selected example corresponds to the one in the [React documentation](https://reactjs.org/docs/hooks-custom.html#extracting-a-custom-hook).
+The basic principle of `useEffect` can be described by the following function:
 
 ```javascript
-function useFriendStatus() {
-  const [getIsOnline, setIsOnline] = useState(null);
+function useEffect(effect) {
+  let cleanup;
 
-  function handleStatusChange(status) {
-    setIsOnline(status.isOnline);
-  }
+  return (...params) => {
+    if (cleanup) {
+      cleanup();
+    }
+    cleanup = effect(...params);
+  };
+}
+```
+
+### when will `useEffect` be executed?
+
+If we look at our previous example:
+
+```jsx
+function App() {
+  const docTitleEffect = useEffect(name => {
+    document.title = `Hi ${name}!`;
+  });
+
+  return props => {
+    docTitleEffect(props.name);
+
+    return <div>your component</div>;
+  };
+}
+```
+
+When the function is called, the effect function is not executed immediately, but pushed to a kind of `ToDo` stack. When the function is finished rendering (like `componentDidMount` or `componentDidUpdate` for classes), the ToDo stack is processed and all effects called during the render function are executed.
+
+### skipping effects
+
+Let's have a look at this component:
+
+```jsx
+function FriendStatus() {
+  const [getIsOnline, setIsOnline] = useState(null);
+  const handleStatusChange = status => setIsOnline(status.isOnline);
 
   const friendEffect = useEffect(friendId => {
     ChatAPI.subscribeToFriendStatus(friendId, handleStatusChange);
@@ -270,68 +326,72 @@ function useFriendStatus() {
     };
   });
 
-  return friendId => {
-    friendEffect(friendId);
-    return getIsOnline();
+  return props => {
+    friendEffect(props.friend.id);
+
+    if (getIsOnline() === null) {
+      return "loading...";
+    }
+    return getIsOnline() ? "Online" : "Offline";
   };
 }
 ```
 
-and the usage of this custom hook:
+The created `friendEffect` is called on every render-cycle and so we could subscribe and unsubscribe to the same friend again and again. But there are two possibilities to skip effects:
+
+by the 2nd parameter of `useEffect`:
 
 ```jsx
 function FriendStatus() {
-  const getIsFriendOnline = useFriendStatus();
+  const [getIsOnline, setIsOnline] = useState(null);
+  const handleStatusChange = status => setIsOnline(status.isOnline);
+
+  const friendEffect = useEffect(
+    friendId => {
+      /* ... (same effect-function as above)*/
+    },
+    // this is a function which gets the same parameters like your effect-function and which must return an array
+    // your effect-function will now only called when one of the array-items will change
+    friendId => [friendId]
+  );
 
   return props => {
-    const isOnline = getIsFriendOnline(props.friend.id);
+    friendEffect(props.friend.id);
 
-    if (isOnline === null) {
-      return "loading...";
-    }
-    return isOnline ? "Online" : "Offline";
+    // return your ui
   };
 }
 ```
 
-### `useEffect`
-
-> `useEffect` should only be used in your custom hooks, if you just want to do side-effects on changes (mount or updated `props`), please see [But how can I realize side effects in my functional components?](#but-how-can-i-realize-side-effects-in-my-functional-components) below.
+Or you can perform the effect conditionally in the render function:
 
 ```jsx
-const effect = useEffect(
-  (...params) => {
-    /* your effect-function */
+function FriendStatus() {
+  const [getIsOnline, setIsOnline] = useState(null);
+  const handleStatusChange = status => setIsOnline(status.isOnline);
 
-    // the effect-function can optionally return a cleanup-handler
-    return () => {
-      /* ... cleanup */
-    };
-  },
-  /* optional: */ (...params) => [
-    /* ... conditionally firing an effect */
-  ]
-);
+  const friendEffect = useEffect(friendId => {
+    /* ... (same effect-function as above)*/
+  });
+
+  return props => {
+    if (props.subscribeToFriendStatus) {
+      friendEffect(props.friend.id);
+    }
+
+    // return your ui
+  };
+}
 ```
 
-`useEffect` returns an executable function (the "effect"). Whenever the effect is called in a render cycle, the effect function is executed with the parameters passed to the effect (but only after rendering is finished). If the component is unmounted, the last cleanup handler (if specified) is executed.
+### possibilities to customize `useEffect`, example: `useMemoizedEffect`
 
-differences to current react-proposal:
-
-- an effect will not execute itself, but must always be called during a render cycle
-- `useEffect` has no possibility to access the current `props` (see [factory function](#factory-function) above)
-  - this is per design, because custom hooks have to be independent from the components
-  - if you want to access `props` in an effect, see [the FAQ below](#but-how-can-i-realize-side-effects-in-my-functional-components)
-- the effect-function can have parameters
-- the second parameter must be a function which returns the array
-
-### possibilities to customize `useEffect`
-
-This form makes it easy to create customized versions of `useEffect`. For example, a version could be `useMemoizedEffect`, which could implement the [skipping-effects-example](https://reactjs.org/docs/hooks-effect.html#tip-optimizing-performance-by-skipping-effects) accordingly:
+This form makes it easy to create customized versions of `useEffect`. For example, a version could be `useMemoizedEffect`, which could implement the skipping-effect example from above accordingly:
 
 ```javascript
 function useFriendStatus() {
-  // ...
+  const [getIsOnline, setIsOnline] = useState(null);
+  const handleStatusChange = status => setIsOnline(status.isOnline);
 
   // the following is equal to useEffect(friendId => { ... }, (friendId) => [friendId]);
   const friendEffect = useMemoizedEffect(friendId => {
@@ -369,6 +429,52 @@ function useMemoizedEffect(effectFn) {
 }
 ```
 
+## advanced usage (custom hooks)
+
+One of the biggest strengths of hooks is that you can easily build your own hooks to build logic independent of components (see react-documentation: ["Building Your Own Hooks"](https://reactjs.org/docs/hooks-custom.html)).
+
+This proposal also makes this possible. An example of this can be seen below.
+
+### custom hook example
+
+The selected example corresponds to the one in the [React documentation](https://reactjs.org/docs/hooks-custom.html#extracting-a-custom-hook).
+
+```javascript
+function useFriendStatus() {
+  const [getIsOnline, setIsOnline] = useState(null);
+  const handleStatusChange = status => setIsOnline(status.isOnline);
+
+  const friendEffect = useEffect(friendId => {
+    ChatAPI.subscribeToFriendStatus(friendId, handleStatusChange);
+    return () => {
+      ChatAPI.unsubscribeFromFriendStatus(friendId, handleStatusChange);
+    };
+  });
+
+  return friendId => {
+    friendEffect(friendId);
+    return getIsOnline();
+  };
+}
+```
+
+and the usage of this custom hook:
+
+```jsx
+function FriendStatus() {
+  const getIsFriendOnline = useFriendStatus();
+
+  return props => {
+    const isOnline = getIsFriendOnline(props.friend.id);
+
+    if (isOnline === null) {
+      return "loading...";
+    }
+    return isOnline ? "Online" : "Offline";
+  };
+}
+```
+
 ## FAQ
 
 Answers to a few questions that I can imagine will come up more often.
@@ -396,9 +502,59 @@ Here are some live-demos via codesandbox, using this package:
 - [example of an effect/state via a factory and a `UseEffect`-component](https://codesandbox.io/s/kmvqp258nr)
 - [custom hook example](https://codesandbox.io/s/2wr71v8zvj)
 
-### But how can I realize side effects in my functional components?
+### what is a factory function and a render function
 
-Use a normal react-Component. A basic implementation could look like this:
+The "factory pattern" works with an outer function, which is executed once for "initialization" before the first render, and an inner function, which reflects the visual react component.
+In the following I will work with the terms "factory function" (outer wrapping function) and "render function" (inner function that provides the React component).
+
+In the first example above is the factory-function:
+
+```
+function Counter() {
+  const [getCount, setCount] = useState();
+
+  return ... // returns the-render-function
+}
+```
+
+In the first example above is the render function:
+
+```jsx
+return props => <div>...</div>;
+```
+
+### TypeScript-typings?
+
+I added a `index.d.ts`-type-file in this repo. Especially type-hints for effects works quite good:
+
+```typescript
+function useFriendStatus() {
+  const [getIsOnline, setIsOnline] = useState(null);
+  const handleStatusChange = status => setIsOnline(status.isOnline);
+
+  const friendEffect = useEffect((friendId: string) => {
+    // ChatAPI.subscribeToFriendStatus(friendId, handleStatusChange);
+    return () => {
+      // ChatAPI.unsubscribeFromFriendStatus(friendId, handleStatusChange);
+    };
+  });
+
+  return (friendId: number) => {
+    friendEffect(friendId); // TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+    // ...
+  };
+}
+```
+
+### Why the getter functions overall? #toomuchnoise
+
+See [`useState`](#usestate) to understand why they need to be getter functions.
+
+About the noise: it's true, through the getter functions there are 2 (brackets for function call) + 3 (if you put a `get` before the variable name) = 5 characters more. However, I believe that this is reasonable, as opposed to the [advantages that are gained](#why-the-factory-pattern-if-the-current-react-proposal-is-so-popular). Especially if you use TypeScript, you can avoid the `get` at the front, because the typing makes it clear that it is a function.
+
+### Adding a simple effect without an additional local state to my functional component is too complicated, how can i avoid it?
+
+You can create a normal react-component for this use-case. A basic implementation could look like this:
 
 ```jsx
 class UseEffect extends React.Component {
@@ -442,9 +598,7 @@ function App(props) {
 }
 ```
 
-A corresponding component could be included in the react-core, but you could/should leave this to the community (and new packages) in which form they want to handle their normal side effects.
-
-This form gives you a great flexibility, e.g.:
+This form gives you a great flexibility in the implementation of `UseEffect`, e.g.:
 
 ```jsx
 // the effect as children:
@@ -457,71 +611,6 @@ This form gives you a great flexibility, e.g.:
   effect={() => { /* ... */ }}
 />
 ```
-
-If you do not want to handle side-effects inside JSX, you could of course use the here proposed `useEffect`:
-
-```jsx
-function App() {
-  const docTitleEffect = useEffect(name => {
-    document.title = `Hi ${name}!`;
-  });
-
-  return props => {
-    docTitleEffect(props.name);
-
-    return <div>your component</div>;
-  };
-}
-```
-
-### what is a factory function and a render function
-
-The "factory pattern" works with an outer function, which is executed once for "initialization" before the first render, and an inner function, which reflects the visual react component.
-In the following I will work with the terms "factory function" (outer wrapping function) and "render function" (inner function that provides the React component).
-
-In the first example above is the factory-function:
-
-```
-function Counter() {
-  const [getCount, setCount] = useState();
-
-  return ... // returns the-render-function
-}
-```
-
-In the first example above is the render function:
-
-```jsx
-return props => <div>...</div>;
-```
-
-### TypeScript-typings?
-
-I added a `index.d.ts`-type-file in this repo. Especially type-hints for effects works quite good:
-
-```typescript
-function useFriendStatus() {
-  // ...
-
-  const friendEffect = useEffect((friendId: string) => {
-    // ChatAPI.subscribeToFriendStatus(friendId, handleStatusChange);
-    return () => {
-      // ChatAPI.unsubscribeFromFriendStatus(friendId, handleStatusChange);
-    };
-  });
-
-  return (friendId: number) => {
-    friendEffect(friendId); // TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
-    // ...
-  };
-}
-```
-
-### Why the getter functions overall? #toomuchnoise
-
-See [`useState`](#usestate) to understand why they need to be getter functions.
-
-About the noise: it's true, through the getter functions there are 2 (brackets for function call) + 3 (if you put a `get` before the variable name) = 5 characters more. However, I believe that this is reasonable, as opposed to the [advantages that are gained](#why-the-factory-pattern-if-the-current-react-proposal-is-so-popular). Especially if you use TypeScript, you can avoid the `get` at the front, because the typing makes it clear that it is a function.
 
 ## history
 
