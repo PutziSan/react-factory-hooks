@@ -125,6 +125,8 @@ differences to current react-proposal:
 
 > Since the factory function is not repeated every time, the first element of the returned array must be a getter function so that the render function can still access the current state.
 
+- An alternaitve syntax could be `const state = useState(initialState)`, with `state()` being the getter and `state(value)` the setter.
+
 The rest is congruent with the current proposal, see [React-Docs - `useState`-API](https://reactjs.org/docs/hooks-reference.html#usestate).
 
 ### `useEffect`
