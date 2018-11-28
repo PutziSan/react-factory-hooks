@@ -32,7 +32,7 @@ function Counter() {
 - [basic hooks API reference](#basic-hooks-api-reference)
   - [factory function](#factory-function)
   - [`useState`](#usestate)
-    - [`useState` - possible alternatives APIs](#usestate-possible-alternatives-apis)
+    - [`useState` - possible alternatives APIs](#usestate---possible-alternatives-apis)
   - [`useEffect`](#useeffect)
   - [`useContext`](#usecontext)
   - [additional hooks](#additional-hooks)
