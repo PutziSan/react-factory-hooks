@@ -32,6 +32,7 @@ function Counter() {
 - [basic hooks API reference](#basic-hooks-api-reference)
   - [factory function](#factory-function)
   - [`useState`](#usestate)
+    - [`useState` - possible alternatives APIs](#usestate-possible-alternatives-apis)
   - [`useEffect`](#useeffect)
   - [`useContext`](#usecontext)
   - [additional hooks](#additional-hooks)
@@ -126,6 +127,61 @@ differences to current react-proposal:
 > Since the factory function is not repeated every time, the first element of the returned array must be a getter function so that the render function can still access the current state.
 
 The rest is congruent with the current proposal, see [React-Docs - `useState`-API](https://reactjs.org/docs/hooks-reference.html#usestate).
+
+#### `useState` - possible alternatives APIs
+
+The argument that `const [get..., set...] = useState()` is too much repetition and somewhat cumbersome can hardly be refuted. Some possible alternatives could be:
+
+> if you like, please share your opinions and ideas in the [related issue](https://github.com/PutziSan/react-factory-hooks/issues/3) 
+
+**`useState` returns one function which is both getter & setter**
+
+```javascript
+const state = useState(initialState);
+state(); // getter
+state(value); // setter
+```
+
+For example, [knockoutjs uses this for its observables](https://knockoutjs.com/documentation/observables.html).
+
+**`useState` returns an object with get/set**
+
+```javascript
+function useState(initialValue) {
+  // ...
+  let value; //
+
+  // use `v` as shorthand for value, it could be any other syntax
+  const state = {
+    get v() {
+      return value;
+    },
+    set v(newValue) {
+      value = newValue;
+      // setState to update the react-component
+    }
+  };
+  return state;
+}
+```
+
+Which uses JS [getter](https://developer.mozilla.org/de/docs/Web/JavaScript/Reference/Functions/get) and [setter](https://developer.mozilla.org/de/docs/Web/JavaScript/Reference/Functions/set). The usage would then look like:
+
+```jsx
+function Counter() {
+  const count = useState();
+
+  return props => (
+    <div>
+      <p>
+        {props.name} clicked {count.v} times
+      </p>
+      <button onClick={() => (count.v = count.v + 1)}>Click me</button>
+    </div>
+  );
+}
+```
+
 
 ### `useEffect`
 
